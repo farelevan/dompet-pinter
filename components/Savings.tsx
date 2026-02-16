@@ -76,7 +76,7 @@ export const Savings: React.FC<Props> = ({ goals, onAddGoal, onUpdateAmount, onE
   const handleWithdraw = (id: string) => {
     const val = prompt("Masukkan jumlah penarikan:");
     if (val) {
-      const amount = parseFloat(val);
+      const amount = parseFloat(val.replace(/[^0-9]/g, ''));
       if (amount > 0) {
         onUpdateAmount(id, -amount);
       }
@@ -210,32 +210,23 @@ export const Savings: React.FC<Props> = ({ goals, onAddGoal, onUpdateAmount, onE
 
               <div className="flex gap-2">
                 <button
-                  onClick={() => onUpdateAmount(goal.id, 100000)}
-                  className="flex-1 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
-                >
-                  + 100rb
-                </button>
-                <button
-                  onClick={() => onUpdateAmount(goal.id, 500000)}
-                  className="flex-1 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-slate-50"
-                >
-                  + 500rb
-                </button>
-                <button
                   onClick={() => {
                     const val = prompt("Masukkan jumlah penambahan:");
-                    if (val) onUpdateAmount(goal.id, parseFloat(val));
+                    if (val) {
+                      const amount = parseFloat(val.replace(/[^0-9]/g, ''));
+                      if (amount > 0) onUpdateAmount(goal.id, amount);
+                    }
                   }}
-                  className="flex-1 py-2 border border-dashed border-slate-300 rounded-lg text-sm text-slate-400 hover:text-blue-600 hover:border-blue-300"
+                  className="flex-1 py-2 bg-emerald-50 border border-emerald-100 rounded-lg text-sm text-emerald-600 hover:bg-emerald-100 font-medium"
                 >
-                  Custom
+                  Tambah Saldo
                 </button>
                 <button
                   onClick={() => handleWithdraw(goal.id)}
-                  className="px-3 py-2 border border-rose-200 text-rose-500 rounded-lg hover:bg-rose-50"
+                  className="flex-1 py-2 bg-rose-50 border border-rose-100 rounded-lg text-sm text-rose-600 hover:bg-rose-100 font-medium flex items-center justify-center gap-2"
                   title="Tarik Saldo"
                 >
-                  <MinusCircle size={18} />
+                  <MinusCircle size={16} /> Tarik
                 </button>
               </div>
             </div>

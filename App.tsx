@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { LayoutDashboard, Wallet, PiggyBank, BarChart3, MessageSquare, TrendingUp } from 'lucide-react';
-import { AppState, Investment, InvestmentType, Transaction, TransactionType, SavingsGoal, GoalType } from './types';
+import { DateRangeProvider } from './contexts/DateRangeContext';
+import { DateRangePicker } from './components/DateRangePicker';
+import { CategoryManager } from './components/CategoryManager';
+import { Category, AppState, Investment, Transaction, TransactionType, SavingsGoal } from './types';
+import { LayoutDashboard, Wallet, PiggyBank, BarChart3, MessageSquare, TrendingUp, FolderOpen } from 'lucide-react';
 import { Dashboard } from './components/Dashboard';
 import { Investments } from './components/Investments';
 import { Savings } from './components/Savings';
@@ -8,29 +11,42 @@ import { TransactionForm } from './components/TransactionForm';
 import { Advisor } from './components/Advisor';
 import { TransactionList } from './components/TransactionList';
 
-// Mock Initial Data
+// Mock Initial Data (Cleared for clean start)
 const INITIAL_STATE: AppState = {
-  transactions: [
-    { id: '1', date: '2023-10-01', description: 'Gaji Bulanan', amount: 15000000, type: 'INCOME', category: 'Gaji' },
-    { id: '2', date: '2023-10-02', description: 'Sewa Apartemen', amount: 4500000, type: 'EXPENSE', category: 'Tagihan' },
-    { id: '3', date: '2023-10-05', description: 'Belanja Bulanan', amount: 2000000, type: 'EXPENSE', category: 'Belanja' },
-  ],
-  investments: [
-    { id: '1', symbol: 'ANTM', name: 'Aneka Tambang', type: InvestmentType.STOCK, quantity: 5000, avgBuyPrice: 1800, currentPrice: 1950 },
-    { id: '2', symbol: 'BBCA', name: 'Bank Central Asia', type: InvestmentType.STOCK, quantity: 200, avgBuyPrice: 9000, currentPrice: 9200 },
-    { id: '3', symbol: 'BTC', name: 'Bitcoin', type: InvestmentType.CRYPTO, quantity: 0.05, avgBuyPrice: 500000000, currentPrice: 550000000 },
-    { id: '4', symbol: 'EMAS', name: 'Emas Batangan', type: InvestmentType.GOLD, quantity: 10, avgBuyPrice: 1000000, currentPrice: 1100000 },
-  ],
-  goals: [
-    { id: '1', name: 'Dana Darurat', type: GoalType.EMERGENCY, targetAmount: 50000000, currentAmount: 25000000 },
-    { id: '2', name: 'Liburan Jepang', type: GoalType.OTHER, targetAmount: 30000000, currentAmount: 5000000 },
-    { id: '3', name: 'Menikah', type: GoalType.WEDDING, targetAmount: 150000000, currentAmount: 45000000 },
+  transactions: [],
+  investments: [],
+  goals: [],
+  categories: [
+    { id: '1', name: 'Gaji', type: 'INCOME', color: '#22c55e' },
+    { id: '2', name: 'Bonus', type: 'INCOME', color: '#10b981' },
+    { id: '3', name: 'Makan', type: 'EXPENSE', color: '#ef4444' },
+    { id: '4', name: 'Transport', type: 'EXPENSE', color: '#f97316' },
+    { id: '5', name: 'Belanja', type: 'EXPENSE', color: '#f59e0b' },
+    { id: '6', name: 'Hiburan', type: 'EXPENSE', color: '#8b5cf6' },
   ]
 };
 
-function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'investments' | 'goals' | 'advisor'>('dashboard');
-  const [state, setState] = useState<AppState>(INITIAL_STATE);
+const STORAGE_KEY = 'dompetpintar_state';
+
+function AppContent() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'investments' | 'goals' | 'advisor' | 'categories'>('dashboard');
+  const [state, setState] = useState<AppState>(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      // Migration: Add categories if missing
+      if (!parsed.categories || parsed.categories.length === 0) {
+        return { ...parsed, categories: INITIAL_STATE.categories };
+      }
+      return parsed;
+    }
+    return INITIAL_STATE;
+  });
+
+  // Persist state to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }, [state]);
 
   // Simulate Realtime Market Updates
   useEffect(() => {
@@ -132,6 +148,22 @@ function App() {
     }));
   };
 
+  // --- Category Operations ---
+  const addCategory = (category: Omit<Category, 'id'>) => {
+    const newCategory: Category = {
+      ...category,
+      id: Date.now().toString()
+    };
+    setState(prev => ({ ...prev, categories: [...(prev.categories || []), newCategory] }));
+  };
+
+  const deleteCategory = (id: string) => {
+    setState(prev => ({
+      ...prev,
+      categories: prev.categories.filter(c => c.id !== id)
+    }));
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row font-sans">
 
@@ -171,6 +203,12 @@ function App() {
               <PiggyBank size={18} /> Tabungan
             </button>
             <button
+              onClick={() => setActiveTab('categories')}
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full md:w-auto text-sm font-medium ${activeTab === 'categories' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}
+            >
+              <FolderOpen size={18} /> Kategori
+            </button>
+            <button
               onClick={() => setActiveTab('advisor')}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all w-full md:w-auto text-sm font-medium ${activeTab === 'advisor' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-900/50' : 'hover:bg-slate-800 hover:text-white'}`}
             >
@@ -195,19 +233,20 @@ function App() {
 
       {/* Main Content */}
       <main className="flex-1 p-4 md:p-8 overflow-y-auto h-screen">
-        <header className="flex justify-between items-center mb-8">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
           <div>
             <h2 className="text-2xl font-bold text-slate-800">
               {activeTab === 'dashboard' && 'Ringkasan Keuangan'}
               {activeTab === 'transactions' && 'Riwayat Transaksi'}
               {activeTab === 'investments' && 'Portofolio Investasi'}
               {activeTab === 'goals' && 'Tujuan Finansial'}
+              {activeTab === 'categories' && 'Manajemen Kategori'}
               {activeTab === 'advisor' && 'Konsultasi AI'}
             </h2>
             <p className="text-slate-500 text-sm">Selamat datang kembali, Pengguna.</p>
           </div>
           <div className="flex gap-2">
-            {/* Additional header controls can go here */}
+            <DateRangePicker />
           </div>
         </header>
 
@@ -217,11 +256,12 @@ function App() {
           {activeTab === 'transactions' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
-                <TransactionForm onAddTransaction={addTransaction} />
+                <TransactionForm onAddTransaction={addTransaction} categories={state.categories || []} />
               </div>
               <div className="lg:col-span-2">
                 <TransactionList
                   transactions={state.transactions}
+                  categories={state.categories || []}
                   onEdit={editTransaction}
                   onDelete={deleteTransaction}
                 />
@@ -230,11 +270,30 @@ function App() {
           )}
 
           {activeTab === 'investments' && (
-            <Investments investments={state.investments} onAddInvestment={addInvestment} />
+            <Investments
+              investments={state.investments}
+              onAddInvestment={addInvestment}
+              onEdit={editInvestment}
+              onDelete={deleteInvestment}
+            />
           )}
 
           {activeTab === 'goals' && (
-            <Savings goals={state.goals} onAddGoal={addGoal} onUpdateAmount={updateGoalAmount} />
+            <Savings
+              goals={state.goals}
+              onAddGoal={addGoal}
+              onUpdateAmount={updateGoalAmount}
+              onEdit={editGoal}
+              onDelete={deleteGoal}
+            />
+          )}
+
+          {activeTab === 'categories' && (
+            <CategoryManager
+              categories={state.categories || []}
+              onAdd={addCategory}
+              onDelete={deleteCategory}
+            />
           )}
 
           {activeTab === 'advisor' && (
@@ -245,6 +304,14 @@ function App() {
         </div>
       </main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <DateRangeProvider>
+      <AppContent />
+    </DateRangeProvider>
   );
 }
 

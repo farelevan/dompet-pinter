@@ -41,10 +41,18 @@ export interface SavingsGoal {
   deadline?: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  type: TransactionType;
+  color: string;
+}
+
 export interface AppState {
   transactions: Transaction[];
   investments: Investment[];
   goals: SavingsGoal[];
+  categories: Category[];
 }
 
 export interface ChatMessage {

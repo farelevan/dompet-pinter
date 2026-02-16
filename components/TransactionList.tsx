@@ -1,21 +1,18 @@
 import React, { useState } from 'react';
-import { Transaction, TransactionType } from '../types';
-import { Edit2, Trash2, X, Check } from 'lucide-react';
-import { formatNumber, parseNumber } from '../utils/format';
+import { Transaction, TransactionType, Category } from '../types';
+import { Edit2, Trash2, X, Check, Download } from 'lucide-react';
+import { formatNumber } from '../utils/format';
 import { ConfirmationModal } from './ConfirmationModal';
+import { exportTransactionsToCSV } from '../utils/export';
 
 interface Props {
     transactions: Transaction[];
+    categories: Category[]; // Added categories prop
     onEdit: (id: string, updatedTx: Partial<Transaction>) => void;
     onDelete: (id: string) => void;
 }
 
-const CATEGORIES = {
-    INCOME: ['Gaji', 'Bonus', 'Dividen', 'Freelance', 'Lainnya'],
-    EXPENSE: ['Makan', 'Transport', 'Belanja', 'Tagihan', 'Hiburan', 'Lainnya']
-};
-
-export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelete }) => {
+export const TransactionList: React.FC<Props> = ({ transactions, categories, onEdit, onDelete }) => {
     const [editingId, setEditingId] = useState<string | null>(null);
     const [editForm, setEditForm] = useState<Partial<Transaction>>({});
 
@@ -51,6 +48,11 @@ export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelet
         }
     };
 
+    const getCategoryColor = (catName: string, type: TransactionType) => {
+        const cat = categories.find(c => c.name === catName && c.type === type);
+        return cat?.color || '#cbd5e1';
+    };
+
     return (
         <>
             <ConfirmationModal
@@ -64,8 +66,15 @@ export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelet
                 type="danger"
             />
             <div className="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
-                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50">
+                <div className="px-6 py-4 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                     <h3 className="font-semibold text-slate-700">Riwayat Transaksi</h3>
+                    <button
+                        onClick={() => exportTransactionsToCSV(transactions)}
+                        className="flex items-center gap-2 text-sm text-slate-600 hover:text-slate-900 px-3 py-1.5 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-all"
+                        disabled={transactions.length === 0}
+                    >
+                        <Download size={16} /> Export CSV
+                    </button>
                 </div>
                 <div className="divide-y divide-slate-100">
                     {transactions.length === 0 ? (
@@ -88,7 +97,13 @@ export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelet
                                                 value={editForm.type}
                                                 onChange={e => {
                                                     const newType = e.target.value as TransactionType;
-                                                    setEditForm({ ...editForm, type: newType, category: CATEGORIES[newType][0] });
+                                                    // Set default category for new type
+                                                    const firstCat = categories.find(c => c.type === newType);
+                                                    setEditForm({
+                                                        ...editForm,
+                                                        type: newType,
+                                                        category: firstCat ? firstCat.name : ''
+                                                    });
                                                 }}
                                             >
                                                 <option value="INCOME">Pemasukan</option>
@@ -99,8 +114,8 @@ export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelet
                                                 value={editForm.category}
                                                 onChange={e => setEditForm({ ...editForm, category: e.target.value })}
                                             >
-                                                {(editForm.type === 'INCOME' ? CATEGORIES.INCOME : CATEGORIES.EXPENSE).map(c => (
-                                                    <option key={c} value={c}>{c}</option>
+                                                {categories.filter(c => c.type === editForm.type).map(c => (
+                                                    <option key={c.id} value={c.name}>{c.name}</option>
                                                 ))}
                                             </select>
                                         </div>
@@ -132,7 +147,12 @@ export const TransactionList: React.FC<Props> = ({ transactions, onEdit, onDelet
                                     <div className="flex justify-between items-center">
                                         <div className="flex-1">
                                             <p className="font-medium text-slate-800">{t.description}</p>
-                                            <p className="text-xs text-slate-500">{t.date} • {t.category}</p>
+                                            <div className="flex items-center gap-2 mt-1">
+                                                <div className="text-xs px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: getCategoryColor(t.category, t.type) }}>
+                                                    {t.category}
+                                                </div>
+                                                <span className="text-xs text-slate-500">• {t.date}</span>
+                                            </div>
                                         </div>
                                         <div className="flex items-center gap-4">
                                             <span className={`font-semibold ${t.type === 'INCOME' ? 'text-emerald-600' : 'text-rose-600'}`}>

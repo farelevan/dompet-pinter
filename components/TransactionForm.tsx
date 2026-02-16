@@ -1,26 +1,32 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PlusCircle, MinusCircle } from 'lucide-react';
-import { TransactionType } from '../types';
+import { TransactionType, Category } from '../types';
 import { formatNumber, parseNumber } from '../utils/format';
 
 interface Props {
   onAddTransaction: (description: string, amount: number, type: TransactionType, category: string) => void;
+  categories: Category[];
 }
 
-const CATEGORIES = {
-  INCOME: ['Gaji', 'Bonus', 'Dividen', 'Freelance', 'Lainnya'],
-  EXPENSE: ['Makan', 'Transport', 'Belanja', 'Tagihan', 'Hiburan', 'Lainnya']
-};
-
-export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
+export const TransactionForm: React.FC<Props> = ({ onAddTransaction, categories }) => {
   const [type, setType] = useState<TransactionType>('EXPENSE');
   const [amount, setAmount] = useState('');
   const [description, setDescription] = useState('');
-  const [category, setCategory] = useState(CATEGORIES.EXPENSE[0]);
+  const [category, setCategory] = useState('');
+
+  // Update default category when type or categories change
+  useEffect(() => {
+    const availableCategories = categories.filter(c => c.type === type);
+    if (availableCategories.length > 0) {
+      setCategory(availableCategories[0].name);
+    } else {
+      setCategory('');
+    }
+  }, [type, categories]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!amount || !description) return;
+    if (!amount || !description || !category) return;
 
     onAddTransaction(description, parseNumber(amount), type, category);
     setAmount('');
@@ -32,6 +38,8 @@ export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
     setAmount(formatNumber(value));
   };
 
+  const availableCategories = categories.filter(c => c.type === type);
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-100">
       <h3 className="text-lg font-semibold text-slate-800 mb-4">Catat Transaksi</h3>
@@ -39,7 +47,7 @@ export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
         <div className="flex gap-2 p-1 bg-slate-100 rounded-lg w-fit">
           <button
             type="button"
-            onClick={() => { setType('INCOME'); setCategory(CATEGORIES.INCOME[0]); }}
+            onClick={() => setType('INCOME')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${type === 'INCOME' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
           >
@@ -47,7 +55,7 @@ export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
           </button>
           <button
             type="button"
-            onClick={() => { setType('EXPENSE'); setCategory(CATEGORIES.EXPENSE[0]); }}
+            onClick={() => setType('EXPENSE')}
             className={`flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all ${type === 'EXPENSE' ? 'bg-white text-rose-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'
               }`}
           >
@@ -74,11 +82,17 @@ export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
             value={category}
             onChange={(e) => setCategory(e.target.value)}
             className="w-full p-2 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+            required
+            disabled={availableCategories.length === 0}
           >
-            {(type === 'INCOME' ? CATEGORIES.INCOME : CATEGORIES.EXPENSE).map(c => (
-              <option key={c} value={c}>{c}</option>
+            {availableCategories.length === 0 && <option value="">Belum ada kategori</option>}
+            {availableCategories.map(c => (
+              <option key={c.id} value={c.name}>{c.name}</option>
             ))}
           </select>
+          {availableCategories.length === 0 && (
+            <p className="text-xs text-rose-500 mt-1">Silakan tambah kategori di menu Kategori.</p>
+          )}
         </div>
 
         <div>
@@ -95,7 +109,8 @@ export const TransactionForm: React.FC<Props> = ({ onAddTransaction }) => {
 
         <button
           type="submit"
-          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+          className="w-full bg-slate-900 hover:bg-slate-800 text-white font-medium py-2 px-4 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={!amount || !description || !category}
         >
           Simpan Transaksi
         </button>
