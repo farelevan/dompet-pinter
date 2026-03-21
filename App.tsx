@@ -311,11 +311,56 @@ function AppContent() {
   );
 }
 
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean, error: any }> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: any) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 p-6">
+          <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full border border-rose-100">
+            <h2 className="text-2xl font-bold text-rose-600 mb-4">Waduh! Ada Error.</h2>
+            <p className="text-slate-600 mb-6 font-medium">Terjadi kesalahan di aplikasi. Kami sudah mencatatnya ke konsol browser.</p>
+            <div className="bg-rose-50 p-4 rounded-lg mb-6 max-h-40 overflow-auto">
+               <p className="text-xs font-mono text-rose-800 break-all">{this.state.error?.toString()}</p>
+            </div>
+            <button 
+              onClick={() => window.location.reload()}
+              className="w-full bg-slate-900 text-white py-3 rounded-xl hover:bg-slate-800 transition-colors"
+            >
+              Muat Ulang Halaman
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
 function App() {
+  useEffect(() => {
+    console.log("DompetPintar App mounted successfully");
+  }, []);
+
   return (
-    <DateRangeProvider>
-      <AppContent />
-    </DateRangeProvider>
+    <ErrorBoundary>
+      <DateRangeProvider>
+        <AppContent />
+      </DateRangeProvider>
+    </ErrorBoundary>
   );
 }
 
