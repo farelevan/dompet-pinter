@@ -31,14 +31,18 @@ const STORAGE_KEY = 'dompetpintar_state';
 function AppContent() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'transactions' | 'investments' | 'goals' | 'advisor' | 'categories'>('dashboard');
   const [state, setState] = useState<AppState>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      // Migration: Add categories if missing
-      if (!parsed.categories || parsed.categories.length === 0) {
-        return { ...parsed, categories: INITIAL_STATE.categories };
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Migration: Add categories if missing
+        if (!parsed.categories || parsed.categories.length === 0) {
+          return { ...parsed, categories: INITIAL_STATE.categories };
+        }
+        return parsed;
       }
-      return parsed;
+    } catch (e) {
+      console.error("Failed to load state from localStorage:", e);
     }
     return INITIAL_STATE;
   });
